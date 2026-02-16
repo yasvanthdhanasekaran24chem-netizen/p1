@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+# Example OpenFOAM pipeline
+# blockMesh
+# snappyHexMesh -overwrite
+# simpleFoam

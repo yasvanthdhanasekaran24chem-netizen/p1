@@ -1,0 +1,4 @@
+# LAMMPS input placeholder
+units metal
+atom_style atomic
+# ... add system setup and run commands

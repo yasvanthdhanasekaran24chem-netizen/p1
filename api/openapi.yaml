@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  title: Cognitive Simulation API
+  version: 0.1.0
+  description: |
+    Optional protections:
+    - API key auth via X-API-Key when P1_API_KEY is set
+    - Rate limiting via env-configured middleware
+    - JSONL audit logging via env-configured middleware
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+security:
+  - ApiKeyAuth: []
+paths:
+  /projects:
+    post:
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                domain: { type: string, enum: [cfd, atomic, hybrid] }
+      responses:
+        '200':
+          description: OK
+  /jobs:
+    get:
+      summary: List recent jobs
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create simulation job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                backend: { type: string, enum: [openfoam, lammps, su2, codesaturne, quantum_espresso] }
+                workdir: { type: string }
+                inputs: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: OK }
+  /jobs/{job_id}/run:
+    post:
+      summary: Run job immediately (sync)
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /jobs/{job_id}/enqueue:
+    post:
+      summary: Enqueue job for worker execution
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: max_attempts
+          required: false
+          schema: { type: integer, default: 1 }
+      responses:
+        '200': { description: OK }
+  /queue/run-next:
+    post:
+      summary: Worker step - run next queued job
+      responses:
+        '200': { description: OK }
+  /queue/worker-step:
+    post:
+      summary: Alias endpoint for worker step integrations
+      responses:
+        '200': { description: OK }
+  /queue/{job_id}:
+    get:
+      summary: Get queue state for a job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /queue/{job_id}/cancel:
+    post:
+      summary: Cancel queued job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: reason
+          required: false
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /queue/{job_id}/replay:
+    post:
+      summary: Replay dead-letter job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: max_attempts
+          required: false
+          schema: { type: integer, default: 1 }
+      responses:
+        '200': { description: OK }
+  /queue/purge:
+    post:
+      summary: Purge finished queue/job records while keeping latest N
+      parameters:
+        - in: query
+          name: keep_latest
+          required: false
+          schema: { type: integer, default: 200 }
+      responses:
+        '200': { description: OK }
+  /jobs/{job_id}:
+    get:
+      summary: Get job status/result
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /experiments/suggest:
+    post:
+      summary: Request next suggested experiments from cognitive planner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domain: { type: string }
+                planner: { type: string, enum: [baseline, model_based, optuna_tpe] }
+                objectives:
+                  type: array
+                  items: { type: object }
+                design_space: { type: object }
+                n: { type: integer, default: 1 }
+      responses:
+        '200': { description: OK }
+  /experiments/pareto:
+    get:
+      summary: Get current Pareto front
+      responses:
+        '200': { description: OK }
+  /health/live:
+    get:
+      summary: Liveness probe
+      responses:
+        '200': { description: OK }
+  /health/ready:
+    get:
+      summary: Readiness probe
+      responses:
+        '200': { description: OK }
+  /health/backends:
+    get:
+      summary: Check installed backend runtime availability
+      responses:
+        '200': { description: OK }
+  /summary:
+    get:
+      summary: System summary (jobs + status counts + backend health)
+      responses:
+        '200': { description: OK }
+  /config/effective:
+    get:
+      summary: Effective runtime config (safe, non-secret)
+      responses:
+        '200': { description: OK }
